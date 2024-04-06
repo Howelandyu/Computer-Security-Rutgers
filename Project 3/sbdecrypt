@@ -1,0 +1,95 @@
+#!/usr/bin/python3
+import sys
+def random_seed(x):
+	return (x*109 + 57) % 256
+
+def map_chr(password):
+	hash_val = 0
+	for i in range(len(password)):
+		c = password[i]
+		hash_val = ord(c) + (hash_val << 6) + (hash_val << 16) - hash_val
+	return hash_val
+
+def encrypt(password, plaintext, ciphertext):
+	chunk_size = 16
+	byte_size = 256
+	g = open(plaintext, encoding="latin-1")
+	def read_chunk():
+		return g.read(chunk_size)
+
+	def shuffle_key_stream(key_stream):
+		def swap(i, j):
+			tmp = key_stream[i]
+			key_stream[i] = key_stream[j]
+			key_stream[j] = key_stream[i]
+		for i in range(len(key_stream)):
+			first = key[i]&0xf
+			second = (key[i]>>4) & 0xf
+			swap(first, second)
+
+	def process_chunk(chunk, ciphertext_block, key_byte, last_chunk):
+		output = b""
+		not_pad = True
+		new_cipher_text = []
+		if type(chunk) is list:
+			bchunk = chunk 
+		else:
+			bchunk = list(bytes(chunk, 'latin-1'))
+
+		block_size = 16
+
+		key_stream = []
+		if ciphertext_block == []:
+			for i in range(block_size):
+				key_byte = random_seed(key_byte)
+				ciphertext_block.append(key_byte)
+
+		for i in range(block_size):
+			key_byte = random_seed(key_byte)
+			key_stream.append(key_byte)
+
+		for i in range(block_size):
+			plain_byte = bchunk[i]
+			cipher_byte = ciphertext_block[i]
+			key_b = key_stream[i]
+			res = (plain_byte^key_b)^cipher_byte
+			output += res.to_bytes(1, byteorder="little")
+			if last_chunk and i == block_size - 1:
+				output = output[:(16 - res)]
+			
+		return output, bchunk, key_byte
+
+	with open(ciphertext, 'w') as f:
+		f.write("")
+	key_byte = map_chr(password)
+	prev_chunk = []
+	pre_chunk = ""
+	has_pre = False
+	for chunk in iter(read_chunk, ''):
+		last_chunk = False
+		if has_pre:
+			chunk = pre_chunk + chunk
+		pre_chunk = g.read(1)
+		if len(pre_chunk) == 0:
+			last_chunk = True
+		else:
+			has_pre = True
+			chunk_size = 15
+		new_str, prev_chunk, key_byte = process_chunk(chunk, prev_chunk, key_byte, last_chunk)
+		
+
+		with open(ciphertext, 'ab') as f:
+			f.write(new_str)
+
+
+if __name__=="__main__":
+	if len(sys.argv) != 4:
+		print("incorrect arguments")
+		sys.exit(1)
+
+	_, password, plaintext, ciphertext = sys.argv
+
+	encrypt(password, plaintext, ciphertext)
+
+
+

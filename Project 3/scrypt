@@ -1,0 +1,49 @@
+#!/usr/bin/python3
+import sys
+def random_seed(x):
+	return (x*109 + 57) % 256
+
+def map_chr(password):
+	hash_val = 0
+	for i in range(len(password)):
+		c = password[i]
+		hash_val = ord(c) + (hash_val << 6) + (hash_val << 16) - hash_val
+	return hash_val
+
+def encrypt(password, plaintext, ciphertext):
+	chunk_size = 10000
+	byte_size = 256
+	g = open(plaintext, encoding="latin-1")
+	def read_chunk():
+		return g.read(chunk_size)
+
+
+	def process_chunk(chunk, key_byte):
+		output = b""
+		bchunk = list(bytes(chunk, 'latin-1'))
+		for i in range(len(bchunk)):
+			plain_byte = bchunk[i]
+			key_byte = random_seed(key_byte)
+			res = plain_byte^key_byte
+			output += res.to_bytes(1, byteorder="little")
+
+		return output, key_byte
+
+	with open(ciphertext, 'w') as f:
+		f.write("")
+	key_byte = map_chr(password)
+	for chunk in iter(read_chunk, ''):
+		new_str, key_byte = process_chunk(chunk, key_byte)
+		with open(ciphertext, 'ab') as f:
+			f.write(new_str)
+	
+if __name__=="__main__":
+	if len(sys.argv) != 4:
+		print("incorrect arguments")
+		sys.exit(1)
+
+	_, password, plaintext, ciphertext = sys.argv
+
+	encrypt(password, plaintext, ciphertext)
+
+

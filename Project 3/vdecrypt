@@ -1,0 +1,48 @@
+#!/usr/bin/python3
+import sys
+
+def read_file(file):
+	with open(file, "r") as f:
+		return f.read()
+
+def write_to_file(file, s):
+	with open(file, "w") as f:
+		f.write(s)
+
+def decrypt(key, plaintext, ciphertext):
+	chunk_size = 10000
+	byte_size = 256
+	key_bytes = list(bytes(key, 'latin-1'))
+	g = open(ciphertext, encoding="latin-1")
+	def read_chunk():
+		return g.read(chunk_size)
+
+	def process_chunk(chunk, index):
+		output = b""
+		bchunk = list(bytes(chunk, 'latin-1'))
+		for i in range(len(bchunk)):
+			cipher_byte = bchunk[i]
+			key_byte = key_bytes[(index + i) % len(key_bytes)]
+			res = (cipher_byte - key_byte) % byte_size
+			output += res.to_bytes(1, byteorder="little")
+
+		return output, (index + len(bchunk)) % len(key_bytes)
+
+	index = 0
+	with open(plaintext, 'w') as f:
+		f.write("")
+	for chunk in iter(read_chunk, ''):
+		new_str, index = process_chunk(chunk, index)
+		with open(plaintext, 'ab') as f:
+			f.write(new_str)
+	return
+
+if __name__=="__main__":
+	if len(sys.argv) != 4:
+		print("incorrect arguments")
+		sys.exit(1)
+
+	_, keyfile, ciphertext, plaintext = sys.argv
+	key = read_file(keyfile)
+	decrypt(key, plaintext, ciphertext)
+
